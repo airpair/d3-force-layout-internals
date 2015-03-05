@@ -51,9 +51,12 @@ event. One example of this is to modify the positions of the nodes
 instead of simply updating the display to reflect what the simulation
 has done. This can be used to force the nodes to be contained [within a
 bounding box](http://bl.ocks.org/mbostock/1129492) or [a
-circle](http://bl.ocks.org/nsonnad/5993342). In both of these examples,
-the handler function checks whether the computed coordinates are within
-the allowed range and if not, resets them.
+circle](http://bl.ocks.org/nsonnad/5993342). 
+In both of these examples, the handler function checks whether the computed coordinates are within
+the allowed range and if not, resets them:
+
+    node.attr("cx", function(d) { return d.x = Math.max(radius, Math.min(width - radius, d.x)); })
+        .attr("cy", function(d) { return d.y = Math.max(radius, Math.min(height - radius, d.y)); });
 
 Another useful modification is to redraw the display not on every tick
 of the simulation, but only every few ticks or even only once at the end
@@ -62,7 +65,11 @@ numbers of nodes and links or create the impression of [a static
 layout](http://bl.ocks.org/mbostock/1667139) instead of a dynamically
 created one. In the extreme case where only the end result is displayed,
 no `tick` event handler is required &mdash; we simply run the layout for
-a number of steps and then draw.
+a number of steps and then draw:
+
+    force.start();
+    for (var i = n * n; i > 0; --i) force.tick();
+    force.stop();
 
 ## Modifying nodes and links
 
@@ -81,6 +88,13 @@ changes automatically. However, it is important that any modifications
 are done in-place and not by creating new arrays of nodes or links, as
 these will not be noticed by the existing force layout.
 
+    var force = d3.layout.force()
+      .nodes(nodes)
+      .links(links);
+    // ...
+    nodes.push(a, b, c);
+    links.push({source: a, target: b}, {source: a, target: c}, {source: b, target: c});
+
 After modifying the network, it is recommended to call the layout's
 `.start()` function again to restart the simulation. While the
 simulation will automatically update the coordinates of new nodes, it
@@ -97,6 +111,17 @@ provide a key function to `.data()` that tells D3 how to match data and
 DOM nodes, as nodes and links can be added and removed in arbitrary
 positions in their respective arrays and the default index-based
 matching will likely produce undesirable results.
+
+    var node = svg.selectAll(".node"),
+    link = svg.selectAll(".link");
+    
+    link = link.data(force.links(), function(d) { return d.source.id + "-" + d.target.id; });
+    link.enter().insert("line", ".node").attr("class", "link");
+    link.exit().remove();
+
+    node = node.data(force.nodes(), function(d) { return d.id;});
+    node.enter().append("circle").attr("class", function(d) { return "node " + d.id; }).attr("r", 8);
+    node.exit().remove();
 
 ### Specifying links using node indices
 
